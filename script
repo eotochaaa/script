@@ -1,0 +1,251 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+
+local gui = Instance.new("ScreenGui", game.CoreGui)
+gui.Name = "TesteAntiCheat_GUI"
+
+local mainFrame = Instance.new("Frame", gui)
+mainFrame.Size = UDim2.new(0, 180, 0, 30) -- Começa minimizado (só título)
+mainFrame.Position = UDim2.new(0, 100, 0, 100)
+mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+mainFrame.BorderSizePixel = 0
+mainFrame.Active = true
+mainFrame.Draggable = true
+
+local title = Instance.new("TextLabel", mainFrame)
+title.Size = UDim2.new(1, -30, 1, 0)
+title.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+title.Text = "Menu de Teste"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.TextScaled = true
+title.Font = Enum.Font.SourceSansBold
+title.Position = UDim2.new(0, 0, 0, 0)
+
+-- Botão Minimizar
+local minimizeBtn = Instance.new("TextButton", mainFrame)
+minimizeBtn.Size = UDim2.new(0, 30, 1, 0)
+minimizeBtn.Position = UDim2.new(1, -30, 0, 0)
+minimizeBtn.Text = "-"
+minimizeBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+minimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+minimizeBtn.Font = Enum.Font.SourceSansBold
+minimizeBtn.TextScaled = true
+minimizeBtn.AutoButtonColor = false
+
+-- Outros elementos que ficarão escondidos ao minimizar:
+local chamsBtn = Instance.new("TextButton", mainFrame)
+chamsBtn.Size = UDim2.new(1, -20, 0, 35)
+chamsBtn.Position = UDim2.new(0, 10, 0, 40)
+chamsBtn.Text = "Ativar Chams"
+chamsBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+chamsBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+chamsBtn.Font = Enum.Font.SourceSans
+chamsBtn.TextScaled = true
+
+local flyBtn = Instance.new("TextButton", mainFrame)
+flyBtn.Size = UDim2.new(1, -20, 0, 35)
+flyBtn.Position = UDim2.new(0, 10, 0, 85)
+flyBtn.Text = "Ativar Fly"
+flyBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+flyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+flyBtn.Font = Enum.Font.SourceSans
+flyBtn.TextScaled = true
+
+local flySpeedSlider = Instance.new("TextBox", mainFrame)
+flySpeedSlider.Size = UDim2.new(1, -20, 0, 35)
+flySpeedSlider.Position = UDim2.new(0, 10, 0, 130)
+flySpeedSlider.Text = "Velocidade: 50"
+flySpeedSlider.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+flySpeedSlider.TextColor3 = Color3.fromRGB(0, 255, 0)
+flySpeedSlider.ClearTextOnFocus = false
+flySpeedSlider.Font = Enum.Font.SourceSans
+flySpeedSlider.TextScaled = true
+
+-- Variáveis de controle
+local chamsAtivo = false
+local flyAtivo = false
+local flySpeed = 50
+local highlights = {}
+local billboards = {}
+local menuMinimizado = true
+
+-- Função para mostrar/esconder controles do menu
+local function atualizarVisibilidadeMenu()
+    if menuMinimizado then
+        mainFrame.Size = UDim2.new(0, 180, 0, 30) -- só título
+        chamsBtn.Visible = false
+        flyBtn.Visible = false
+        flySpeedSlider.Visible = false
+        minimizeBtn.Text = "+"
+    else
+        mainFrame.Size = UDim2.new(0, 180, 0, 200)
+        chamsBtn.Visible = true
+        flyBtn.Visible = true
+        flySpeedSlider.Visible = true
+        minimizeBtn.Text = "-"
+    end
+end
+
+minimizeBtn.MouseButton1Click:Connect(function()
+    menuMinimizado = not menuMinimizado
+    atualizarVisibilidadeMenu()
+end)
+
+-- Inicializa menu minimizado
+atualizarVisibilidadeMenu()
+
+-- Funções ESP e Fly continuam iguais:
+
+local function aplicarVisual(jogador)
+    if jogador == LocalPlayer then return end
+
+    if highlights[jogador] then
+        if jogador.Character then
+            highlights[jogador].Adornee = jogador.Character
+        end
+        return
+    end
+
+    local function criarHighlight()
+        local highlight = Instance.new("Highlight")
+        highlight.Name = "ESP_Highlight"
+        highlight.FillColor = Color3.fromRGB(255, 0, 0)
+        highlight.FillTransparency = 0.5
+        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+        highlight.OutlineTransparency = 0
+        highlight.Adornee = jogador.Character
+        highlight.Parent = game.CoreGui
+        highlights[jogador] = highlight
+    end
+
+    local function criarBillboard()
+        local billboard = Instance.new("BillboardGui")
+        billboard.Name = "ESP_Name"
+        billboard.Size = UDim2.new(0, 200, 0, 30)
+        billboard.StudsOffset = Vector3.new(0, 3, 0)
+        billboard.AlwaysOnTop = true
+        billboard.Adornee = jogador.Character:FindFirstChild("Head") or jogador.Character:FindFirstChildWhichIsA("BasePart")
+
+        local nameLabel = Instance.new("TextLabel", billboard)
+        nameLabel.Size = UDim2.new(1, 0, 1, 0)
+        nameLabel.BackgroundTransparency = 1
+        nameLabel.Text = jogador.Name
+        nameLabel.TextColor3 = Color3.fromRGB(0, 255, 255)
+        nameLabel.TextStrokeTransparency = 0.5
+        nameLabel.TextScaled = true
+        billboard.Parent = game.CoreGui
+
+        billboards[jogador] = billboard
+    end
+
+    if jogador.Character then
+        criarHighlight()
+        criarBillboard()
+    end
+
+    jogador.CharacterAdded:Connect(function()
+        wait(1)
+        removerVisual(jogador)
+        if chamsAtivo then
+            aplicarVisual(jogador)
+        end
+    end)
+end
+
+local function removerVisual(jogador)
+    if highlights[jogador] then highlights[jogador]:Destroy() highlights[jogador] = nil end
+    if billboards[jogador] then billboards[jogador]:Destroy() billboards[jogador] = nil end
+end
+
+local function atualizarVisual()
+    for _, jogador in pairs(Players:GetPlayers()) do
+        if jogador ~= LocalPlayer and jogador.Character then
+            if chamsAtivo then
+                aplicarVisual(jogador)
+            else
+                removerVisual(jogador)
+            end
+        end
+    end
+end
+
+RunService.Heartbeat:Connect(function()
+    if chamsAtivo then
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character and not highlights[player] then
+                aplicarVisual(player)
+            end
+        end
+    end
+end)
+
+Players.PlayerAdded:Connect(function(jogador)
+    jogador.CharacterAdded:Connect(function()
+        wait(1)
+        if chamsAtivo then
+            aplicarVisual(jogador)
+        end
+    end)
+end)
+
+local bodyVel
+
+RunService.RenderStepped:Connect(function()
+    if flyAtivo and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        if not bodyVel then
+            bodyVel = Instance.new("BodyVelocity")
+            bodyVel.Name = "FlyVelocity"
+            bodyVel.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+            bodyVel.Velocity = Vector3.zero
+            bodyVel.Parent = LocalPlayer.Character.HumanoidRootPart
+        end
+
+        local cam = workspace.CurrentCamera
+        local move = Vector3.zero
+
+        if UIS:IsKeyDown(Enum.KeyCode.W) then move += cam.CFrame.LookVector end
+        if UIS:IsKeyDown(Enum.KeyCode.S) then move -= cam.CFrame.LookVector end
+        if UIS:IsKeyDown(Enum.KeyCode.A) then move -= cam.CFrame.RightVector end
+        if UIS:IsKeyDown(Enum.KeyCode.D) then move += cam.CFrame.RightVector end
+        if UIS:IsKeyDown(Enum.KeyCode.E) then move += Vector3.new(0, 1, 0) end
+        if UIS:IsKeyDown(Enum.KeyCode.Q) then move -= Vector3.new(0, 1, 0) end
+
+        if move.Magnitude > 0 then
+            bodyVel.Velocity = move.Unit * flySpeed
+        else
+            bodyVel.Velocity = Vector3.zero
+        end
+    elseif bodyVel then
+        bodyVel:Destroy()
+        bodyVel = nil
+    end
+end)
+
+chamsBtn.MouseButton1Click:Connect(function()
+    chamsAtivo = not chamsAtivo
+    chamsBtn.Text = chamsAtivo and "Desativar Chams" or "Ativar Chams"
+    atualizarVisual()
+end)
+
+flyBtn.MouseButton1Click:Connect(function()
+    flyAtivo = not flyAtivo
+    flyBtn.Text = flyAtivo and "Desativar Fly" or "Ativar Fly"
+end)
+
+flySpeedSlider.FocusLost:Connect(function()
+    local text = tonumber(flySpeedSlider.Text:match("%d+"))
+    if text then
+        flySpeed = math.clamp(text, 10, 500)
+        flySpeedSlider.Text = "Velocidade: " .. flySpeed
+    else
+        flySpeedSlider.Text = "Velocidade: " .. flySpeed
+    end
+end)
+
+for _, jogador in pairs(Players:GetPlayers()) do
+    if jogador.Character then
+        aplicarVisual(jogador)
+    end
+end
