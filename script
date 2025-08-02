@@ -10,7 +10,7 @@ gui.Parent = game.CoreGui
 gui.ResetOnSpawn = false
 
 local mainFrame = Instance.new("Frame", gui)
-mainFrame.Size = UDim2.new(0, 180, 0, 30) -- Minimizado inicial
+mainFrame.Size = UDim2.new(0, 180, 0, 30)
 mainFrame.Position = UDim2.new(0, 100, 0, 100)
 mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 mainFrame.BorderSizePixel = 0
@@ -96,7 +96,7 @@ end)
 
 atualizarVisibilidadeMenu()
 
--- === Variáveis controle ===
+-- === Variáveis de controle ===
 local chamsAtivo = false
 local flyAtivo = false
 local flySpeed = 50
@@ -104,7 +104,6 @@ local flySpeed = 50
 local highlights = {}
 local billboards = {}
 
--- === Funções ESP ===
 local function removerVisual(jogador)
     if highlights[jogador] then
         highlights[jogador]:Destroy()
@@ -118,49 +117,54 @@ end
 
 local function aplicarVisual(jogador)
     if jogador == LocalPlayer then return end
-    if highlights[jogador] then
-        if jogador.Character then
-            highlights[jogador].Adornee = jogador.Character
+
+    local function criarOuAtualizarHighlight()
+        local highlight = highlights[jogador]
+        if not highlight or not highlight:IsDescendantOf(game) then
+            highlight = Instance.new("Highlight")
+            highlight.Name = "ESP_Highlight"
+            highlight.FillColor = Color3.fromRGB(255, 0, 0)
+            highlight.FillTransparency = 0.5
+            highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+            highlight.OutlineTransparency = 0
+            highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+            highlight.Parent = game.CoreGui
+            highlights[jogador] = highlight
         end
-        return
-    end
-    local function criarHighlight()
-        local highlight = Instance.new("Highlight")
-        highlight.Name = "ESP_Highlight"
-        highlight.FillColor = Color3.fromRGB(255, 0, 0)
-        highlight.FillTransparency = 0.5
-        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-        highlight.OutlineTransparency = 0
-        highlight.Adornee = jogador.Character
-        highlight.Parent = game.CoreGui
-        highlights[jogador] = highlight
-    end
-    local function criarBillboard()
-        local billboard = Instance.new("BillboardGui")
-        billboard.Name = "ESP_Name"
-        billboard.Size = UDim2.new(0, 200, 0, 30)
-        billboard.StudsOffset = Vector3.new(0, 3, 0)
-        billboard.AlwaysOnTop = true
         if jogador.Character then
-            billboard.Adornee = jogador.Character:FindFirstChild("Head") or jogador.Character:FindFirstChildWhichIsA("BasePart")
+            highlight.Adornee = jogador.Character
+        end
+    end
+
+    local function criarOuAtualizarBillboard()
+        local billboard = billboards[jogador]
+        if not billboard or not billboard:IsDescendantOf(game) then
+            billboard = Instance.new("BillboardGui")
+            billboard.Name = "ESP_Name"
+            billboard.Size = UDim2.new(0, 200, 0, 30)
+            billboard.StudsOffset = Vector3.new(0, 3, 0)
+            billboard.AlwaysOnTop = true
+            billboard.Parent = game.CoreGui
+
+            local nameLabel = Instance.new("TextLabel", billboard)
+            nameLabel.Size = UDim2.new(1, 0, 1, 0)
+            nameLabel.BackgroundTransparency = 1
+            nameLabel.Text = jogador.Name
+            nameLabel.TextColor3 = Color3.fromRGB(0, 255, 255)
+            nameLabel.TextStrokeTransparency = 0.5
+            nameLabel.TextScaled = true
+
+            billboards[jogador] = billboard
         end
 
-        local nameLabel = Instance.new("TextLabel", billboard)
-        nameLabel.Size = UDim2.new(1, 0, 1, 0)
-        nameLabel.BackgroundTransparency = 1
-        nameLabel.Text = jogador.Name
-        nameLabel.TextColor3 = Color3.fromRGB(0, 255, 255)
-        nameLabel.TextStrokeTransparency = 0.5
-        nameLabel.TextScaled = true
-        billboard.Parent = game.CoreGui
-
-        billboards[jogador] = billboard
+        if jogador.Character then
+            local head = jogador.Character:FindFirstChild("Head") or jogador.Character:FindFirstChildWhichIsA("BasePart")
+            billboard.Adornee = head
+        end
     end
 
-    if jogador.Character then
-        criarHighlight()
-        criarBillboard()
-    end
+    criarOuAtualizarHighlight()
+    criarOuAtualizarBillboard()
 
     jogador.CharacterAdded:Connect(function()
         wait(1)
@@ -192,6 +196,23 @@ Players.PlayerAdded:Connect(function(jogador)
     end)
 end)
 
+-- Atualização constante dos adornos para evitar sumiço ao ficar invisível
+RunService.RenderStepped:Connect(function()
+    if chamsAtivo then
+        for _, jogador in pairs(Players:GetPlayers()) do
+            if jogador ~= LocalPlayer and jogador.Character then
+                local head = jogador.Character:FindFirstChild("Head") or jogador.Character:FindFirstChildWhichIsA("BasePart")
+                if highlights[jogador] then
+                    highlights[jogador].Adornee = jogador.Character
+                end
+                if billboards[jogador] and head then
+                    billboards[jogador].Adornee = head
+                end
+            end
+        end
+    end
+end)
+
 -- === Fly ===
 local bodyVel
 
@@ -203,7 +224,6 @@ RunService.RenderStepped:Connect(function()
             bodyVel.MaxForce = Vector3.new(1e5, 1e5, 1e5)
             bodyVel.Velocity = Vector3.new(0,0,0)
             bodyVel.Parent = LocalPlayer.Character.HumanoidRootPart
-            -- Desativa gravidade temporariamente:
             local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
             if hum then
                 hum.PlatformStand = true
@@ -237,7 +257,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- === Conexões dos botões ===
+-- === Botões ===
 chamsBtn.MouseButton1Click:Connect(function()
     chamsAtivo = not chamsAtivo
     chamsBtn.Text = chamsAtivo and "Desativar Chams" or "Ativar Chams"
@@ -259,7 +279,7 @@ flySpeedSlider.FocusLost:Connect(function()
     end
 end)
 
--- Inicializa ESP em jogadores já existentes
+-- === Inicialização de jogadores já existentes ===
 for _, jogador in pairs(Players:GetPlayers()) do
     if jogador.Character then
         aplicarVisual(jogador)
