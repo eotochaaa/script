@@ -1,69 +1,233 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+
+-- === GUI ===
+local gui = Instance.new("ScreenGui")
+gui.Name = "TesteAntiCheat_GUI"
+gui.Parent = game.CoreGui
+gui.ResetOnSpawn = false
+
+local mainFrame = Instance.new("Frame", gui)
+mainFrame.Size = UDim2.new(0, 180, 0, 30)
+mainFrame.Position = UDim2.new(0, 100, 0, 100)
+mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+mainFrame.BorderSizePixel = 0
+mainFrame.Active = true
+mainFrame.Draggable = true
+
+local title = Instance.new("TextLabel", mainFrame)
+title.Size = UDim2.new(1, -30, 1, 0)
+title.Position = UDim2.new(0, 0, 0, 0)
+title.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+title.Text = "Menu de Teste"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.TextScaled = true
+title.Font = Enum.Font.SourceSansBold
+title.BorderSizePixel = 0
+
+local minimizeBtn = Instance.new("TextButton", mainFrame)
+minimizeBtn.Size = UDim2.new(0, 30, 1, 0)
+minimizeBtn.Position = UDim2.new(1, -30, 0, 0)
+minimizeBtn.Text = "-"
+minimizeBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+minimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+minimizeBtn.Font = Enum.Font.SourceSansBold
+minimizeBtn.TextScaled = true
+minimizeBtn.AutoButtonColor = false
+minimizeBtn.BorderSizePixel = 0
+
+local controlsFrame = Instance.new("Frame", mainFrame)
+controlsFrame.Position = UDim2.new(0, 0, 0, 30)
+controlsFrame.Size = UDim2.new(1, 0, 0, 165)
+controlsFrame.BackgroundTransparency = 1
+controlsFrame.Visible = false
+
+local chamsBtn = Instance.new("TextButton", controlsFrame)
+chamsBtn.Size = UDim2.new(1, -20, 0, 40)
+chamsBtn.Position = UDim2.new(0, 10, 0, 0)
+chamsBtn.Text = "Ativar ESP"
+chamsBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+chamsBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+chamsBtn.Font = Enum.Font.SourceSans
+chamsBtn.TextScaled = true
+chamsBtn.BorderSizePixel = 0
+
+local flyBtn = Instance.new("TextButton", controlsFrame)
+flyBtn.Size = UDim2.new(1, -20, 0, 40)
+flyBtn.Position = UDim2.new(0, 10, 0, 50)
+flyBtn.Text = "Ativar Fly"
+flyBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+flyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+flyBtn.Font = Enum.Font.SourceSans
+flyBtn.TextScaled = true
+flyBtn.BorderSizePixel = 0
+
+local flySpeedSlider = Instance.new("TextBox", controlsFrame)
+flySpeedSlider.Size = UDim2.new(1, -20, 0, 40)
+flySpeedSlider.Position = UDim2.new(0, 10, 0, 100)
+flySpeedSlider.Text = "Velocidade: 50"
+flySpeedSlider.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+flySpeedSlider.TextColor3 = Color3.fromRGB(0, 255, 0)
+flySpeedSlider.ClearTextOnFocus = false
+flySpeedSlider.Font = Enum.Font.SourceSans
+flySpeedSlider.TextScaled = true
+flySpeedSlider.BorderSizePixel = 0
+
+local menuMinimizado = true
+
+local function atualizarVisibilidadeMenu()
+    if menuMinimizado then
+        mainFrame.Size = UDim2.new(0, 180, 0, 30)
+        controlsFrame.Visible = false
+        minimizeBtn.Text = "+"
+    else
+        mainFrame.Size = UDim2.new(0, 180, 0, 195)
+        controlsFrame.Visible = true
+        minimizeBtn.Text = "-"
+    end
+end
+
+minimizeBtn.MouseButton1Click:Connect(function()
+    menuMinimizado = not menuMinimizado
+    atualizarVisibilidadeMenu()
+end)
+
+atualizarVisibilidadeMenu()
+
+-- === Variáveis de controle ===
+local espAtivo = false
+local flyAtivo = false
+local flySpeed = 50
+
+local torsoESP = {} -- Armazena os ESPs
+
+-- === Funções ESP com BoxHandleAdornment ===
+local function removerVisual(jogador)
+    if torsoESP[jogador] then
+        torsoESP[jogador]:Destroy()
+        torsoESP[jogador] = nil
+    end
+end
+
 local function aplicarVisual(jogador)
     if jogador == LocalPlayer then return end
-
-    local function criarOuAtualizarHighlight()
-        local highlight = highlights[jogador]
-        if not highlight or not highlight:IsDescendantOf(game) then
-            highlight = Instance.new("Highlight")
-            highlight.Name = "ESP_Highlight"
-            highlight.FillColor = Color3.fromRGB(255, 0, 0)
-            highlight.FillTransparency = 0.5
-            highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-            highlight.OutlineTransparency = 0
-            highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-            highlight.Parent = game.CoreGui
-            highlights[jogador] = highlight
-        end
-        if jogador.Character then
-            highlight.Adornee = jogador.Character
+    if jogador.Character and not torsoESP[jogador] then
+        local torso = jogador.Character:FindFirstChild("UpperTorso") or jogador.Character:FindFirstChild("Torso") or jogador.Character:FindFirstChild("HumanoidRootPart")
+        if torso then
+            local box = Instance.new("BoxHandleAdornment")
+            box.Name = "ESP_TorsoBox"
+            box.Adornee = torso
+            box.AlwaysOnTop = true
+            box.ZIndex = 5
+            box.Size = torso.Size + Vector3.new(0.1, 0.1, 0.1)
+            box.Transparency = 0.2
+            box.Color3 = Color3.fromRGB(255, 0, 0)
+            box.Parent = game.CoreGui
+            torsoESP[jogador] = box
         end
     end
-
-    local function criarOuAtualizarBillboard()
-        local billboard = billboards[jogador]
-        if not billboard or not billboard:IsDescendantOf(game) then
-            billboard = Instance.new("BillboardGui")
-            billboard.Name = "ESP_Name"
-            billboard.Size = UDim2.new(0, 200, 0, 30)
-            billboard.StudsOffset = Vector3.new(0, 3, 0)
-            billboard.AlwaysOnTop = true
-            billboard.Parent = game.CoreGui
-
-            local nameLabel = Instance.new("TextLabel", billboard)
-            nameLabel.Size = UDim2.new(1, 0, 1, 0)
-            nameLabel.BackgroundTransparency = 1
-            nameLabel.Text = jogador.Name
-            nameLabel.TextColor3 = Color3.fromRGB(0, 255, 255)
-            nameLabel.TextStrokeTransparency = 0.5
-            nameLabel.TextScaled = true
-
-            billboards[jogador] = billboard
-        end
-
-        if jogador.Character then
-            local head = jogador.Character:FindFirstChild("Head") or jogador.Character:FindFirstChildWhichIsA("BasePart")
-            billboard.Adornee = head
-        end
-    end
-
-    local function forcarPartesVisiveis()
-        if not jogador.Character then return end
-        for _, part in ipairs(jogador.Character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.LocalTransparencyModifier = 0
-            end
-        end
-    end
-
-    criarOuAtualizarHighlight()
-    criarOuAtualizarBillboard()
-    forcarPartesVisiveis()
 
     jogador.CharacterAdded:Connect(function()
         wait(1)
         removerVisual(jogador)
-        if chamsAtivo then
+        if espAtivo then
             aplicarVisual(jogador)
         end
     end)
+end
+
+local function atualizarVisual()
+    for _, jogador in pairs(Players:GetPlayers()) do
+        if jogador ~= LocalPlayer and jogador.Character then
+            if espAtivo then
+                aplicarVisual(jogador)
+            else
+                removerVisual(jogador)
+            end
+        end
+    end
+end
+
+Players.PlayerAdded:Connect(function(jogador)
+    jogador.CharacterAdded:Connect(function()
+        wait(1)
+        if espAtivo then
+            aplicarVisual(jogador)
+        end
+    end)
+end)
+
+-- === Fly ===
+local bodyVel
+
+RunService.RenderStepped:Connect(function()
+    if flyAtivo and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        if not bodyVel then
+            bodyVel = Instance.new("BodyVelocity")
+            bodyVel.Name = "FlyVelocity"
+            bodyVel.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+            bodyVel.Velocity = Vector3.new(0,0,0)
+            bodyVel.Parent = LocalPlayer.Character.HumanoidRootPart
+            local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if hum then
+                hum.PlatformStand = true
+            end
+        end
+
+        local cam = workspace.CurrentCamera
+        local move = Vector3.new(0,0,0)
+
+        if UIS:IsKeyDown(Enum.KeyCode.W) then move += cam.CFrame.LookVector end
+        if UIS:IsKeyDown(Enum.KeyCode.S) then move -= cam.CFrame.LookVector end
+        if UIS:IsKeyDown(Enum.KeyCode.A) then move -= cam.CFrame.RightVector end
+        if UIS:IsKeyDown(Enum.KeyCode.D) then move += cam.CFrame.RightVector end
+        if UIS:IsKeyDown(Enum.KeyCode.E) then move += Vector3.new(0, 1, 0) end
+        if UIS:IsKeyDown(Enum.KeyCode.Q) then move -= Vector3.new(0, 1, 0) end
+
+        if move.Magnitude > 0 then
+            bodyVel.Velocity = move.Unit * flySpeed
+        else
+            bodyVel.Velocity = Vector3.new(0, 0, 0)
+        end
+    else
+        if bodyVel then
+            bodyVel:Destroy()
+            bodyVel = nil
+            local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if hum then
+                hum.PlatformStand = false
+            end
+        end
+    end
+end)
+
+-- === Conexões dos botões ===
+chamsBtn.MouseButton1Click:Connect(function()
+    espAtivo = not espAtivo
+    chamsBtn.Text = espAtivo and "Desativar ESP" or "Ativar ESP"
+    atualizarVisual()
+end)
+
+flyBtn.MouseButton1Click:Connect(function()
+    flyAtivo = not flyAtivo
+    flyBtn.Text = flyAtivo and "Desativar Fly" or "Ativar Fly"
+end)
+
+flySpeedSlider.FocusLost:Connect(function()
+    local number = tonumber(flySpeedSlider.Text:match("%d+"))
+    if number then
+        flySpeed = math.clamp(number, 10, 500)
+        flySpeedSlider.Text = "Velocidade: " .. flySpeed
+    else
+        flySpeedSlider.Text = "Velocidade: " .. flySpeed
+    end
+end)
+
+-- Inicializa ESP em jogadores já existentes
+for _, jogador in pairs(Players:GetPlayers()) do
+    if jogador.Character then
+        aplicarVisual(jogador)
+    end
 end
