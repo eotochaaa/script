@@ -11,7 +11,7 @@ screenGui.ResetOnSpawn = false
 
 -- Main Frame
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 200, 0, 100)
+frame.Size = UDim2.new(0, 200, 0, 140)
 frame.Position = UDim2.new(0, 20, 0, 100)
 frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 frame.BorderSizePixel = 0
@@ -40,6 +40,18 @@ espBtn.TextScaled = true
 espBtn.BorderSizePixel = 0
 espBtn.Parent = frame
 
+-- Botão Fly
+local flyBtn = Instance.new("TextButton")
+flyBtn.Size = UDim2.new(0.8, 0, 0, 40)
+flyBtn.Position = UDim2.new(0.1, 0, 0, 95)
+flyBtn.Text = "Ativar Fly"
+flyBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+flyBtn.TextColor3 = Color3.new(1, 1, 1)
+flyBtn.Font = Enum.Font.SourceSans
+flyBtn.TextScaled = true
+flyBtn.BorderSizePixel = 0
+flyBtn.Parent = frame
+
 -- Variáveis para arrastar
 local dragging = false
 local dragInput
@@ -56,7 +68,6 @@ local function update(input)
     )
 end
 
--- Eventos para drag
 frame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         dragging = true
@@ -102,7 +113,6 @@ end
 local function aplicarESP(jogador)
     if jogador == LocalPlayer then return end
     if jogador.Character then
-        -- Caixa no torso
         if not torsoESP[jogador] then
             local torso = jogador.Character:FindFirstChild("UpperTorso") or jogador.Character:FindFirstChild("Torso") or jogador.Character:FindFirstChild("HumanoidRootPart")
             if torso then
@@ -119,7 +129,6 @@ local function aplicarESP(jogador)
             end
         end
 
-        -- Nome acima da cabeça
         if not nameTags[jogador] then
             local head = jogador.Character:FindFirstChild("Head") or jogador.Character:FindFirstChild("UpperTorso") or jogador.Character:FindFirstChild("HumanoidRootPart")
             if head then
@@ -167,7 +176,6 @@ local function atualizarESP()
     end
 end
 
--- Jogador novo entra
 Players.PlayerAdded:Connect(function(jogador)
     jogador.CharacterAdded:Connect(function()
         wait(1)
@@ -177,16 +185,78 @@ Players.PlayerAdded:Connect(function(jogador)
     end)
 end)
 
--- Botão de ativar ESP
 espBtn.MouseButton1Click:Connect(function()
     espAtivo = not espAtivo
     espBtn.Text = espAtivo and "Desativar ESP" or "Ativar ESP"
     atualizarESP()
 end)
 
--- Inicia para jogadores existentes
 for _, jogador in pairs(Players:GetPlayers()) do
     if jogador ~= LocalPlayer and jogador.Character then
         aplicarESP(jogador)
     end
 end
+
+-- Fly logic
+local flying = false
+local flySpeed = 100
+local flyBodyGyro, flyBodyVelocity
+local flyConnection
+
+local function toggleFly()
+    local character = LocalPlayer.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+
+    flying = not flying
+    flyBtn.Text = flying and "Desativar Fly" or "Ativar Fly"
+
+    if flying then
+        flyBodyGyro = Instance.new("BodyGyro")
+        flyBodyGyro.P = 9e4
+        flyBodyGyro.maxTorque = Vector3.new(9e9, 9e9, 9e9)
+        flyBodyGyro.CFrame = character.HumanoidRootPart.CFrame
+        flyBodyGyro.Parent = character.HumanoidRootPart
+
+        flyBodyVelocity = Instance.new("BodyVelocity")
+        flyBodyVelocity.velocity = Vector3.new(0, 0, 0)
+        flyBodyVelocity.maxForce = Vector3.new(9e9, 9e9, 9e9)
+        flyBodyVelocity.Parent = character.HumanoidRootPart
+
+        flyConnection = RunService.RenderStepped:Connect(function()
+            if flying and character and character:FindFirstChild("HumanoidRootPart") then
+                local moveDirection = Vector3.zero
+                if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+                    moveDirection += workspace.CurrentCamera.CFrame.LookVector
+                end
+                if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+                    moveDirection -= workspace.CurrentCamera.CFrame.LookVector
+                end
+                if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+                    moveDirection -= workspace.CurrentCamera.CFrame.RightVector
+                end
+                if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+                    moveDirection += workspace.CurrentCamera.CFrame.RightVector
+                end
+                if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+                    moveDirection += Vector3.new(0, 1, 0)
+                end
+                if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
+                    moveDirection -= Vector3.new(0, 1, 0)
+                end
+
+                if moveDirection.Magnitude > 0 then
+                    flyBodyVelocity.Velocity = moveDirection.Unit * flySpeed
+                else
+                    flyBodyVelocity.Velocity = Vector3.zero
+                end
+                flyBodyGyro.CFrame = workspace.CurrentCamera.CFrame
+            end
+        end)
+    else
+        if flyBodyGyro then flyBodyGyro:Destroy() end
+        if flyBodyVelocity then flyBodyVelocity:Destroy() end
+        if flyConnection then flyConnection:Disconnect() end
+    end
+end
+
+flyBtn.MouseButton1Click:Connect(toggleFly)
